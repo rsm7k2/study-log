@@ -1,0 +1,18 @@
+database_id
+PS D:\07_Node\study-log> npx wrangler d1 create study_log_db
+
+ ⛅️ wrangler 4.110.0
+────────────────────
+✅ Successfully created DB 'study_log_db' in region APAC
+Created your new D1 database.
+
+To access your new D1 Database in your Worker, add the following snippet to your configuration file:
+{
+  "d1_databases": [
+    {
+      "binding": "study_log_db",
+      "database_name": "study_log_db",
+      "database_id": "a2285a76-df7d-4777-b9e2-3ae804ae65e7"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+node_modules/
+.dev.vars
+client_secret_*.json
+.wrangler/

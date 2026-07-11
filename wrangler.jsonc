@@ -1,0 +1,12 @@
+{
+  "name": "study-log-worker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "d1_databases": [
+    {
+      "binding": "study_log_db",
+      "database_name": "study_log_db",
+      "database_id": "a2285a76-df7d-4777-b9e2-3ae804ae65e7"
+    }
+  ]
+}

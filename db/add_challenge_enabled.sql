@@ -1,0 +1,1 @@
+ALTER TABLE subjects ADD COLUMN challenge_enabled INTEGER NOT NULL DEFAULT 1;

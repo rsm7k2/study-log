@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>学習記録</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg: #F5F6FA;
+    --surface: #FFFFFF;
+    --border: #E2E5EC;
+    --border-strong: #C7CBD6;
+    --text: #1E2433;
+    --text-muted: #6B7280;
+    --primary: #3452DB;
+    --primary-dark: #2740B0;
+    --danger: #E5484D;
+    --star: #F5A623;
+    --success: #1F9D77;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding-bottom: 72px;
+  }
+
+  header { padding: 20px 16px 12px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 1.3rem; font-weight: 800; }
+  .header-user { display: flex; align-items: center; gap: 8px; }
+  .header-user img { width: 28px; height: 28px; border-radius: 50%; }
+  .logout-btn { background: none; border: none; color: var(--text-muted); font-size: 0.78rem; padding: 4px 6px; }
+
+  main { padding: 0 16px 24px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  #login-screen {
+    display: none;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    text-align: center;
+  }
+  #login-screen h1 { font-size: 1.4rem; margin: 0; }
+  #login-screen p { color: var(--text-muted); font-size: 0.88rem; margin: 0 0 8px; }
+  #login-error { color: var(--danger); font-size: 0.82rem; min-height: 1.2em; }
+
+  #app-shell { display: none; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  h2 { font-size: 1rem; font-weight: 700; margin: 0; }
+  label.field-label { display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px; }
+
+  .info-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text-muted); font-size: 0.85rem; font-weight: 700;
+  }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+
+  li.subject-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  li.subject-row:last-child { border-bottom: none; }
+
+  .subject-ring { flex: 0 0 auto; cursor: pointer; }
+  .subject-main { flex: 1; min-width: 0; }
+  .subject-name-text {
+    font-weight: 600; font-size: 0.95rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .subject-name-input {
+    width: 100%; min-height: 34px; margin-bottom: 0; padding: 4px 8px; font-size: 0.95rem;
+  }
+  .subject-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+  .subject-order { display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
+  .order-btn {
+    width: 26px; height: 22px; border: 1px solid var(--border); background: var(--bg);
+    border-radius: 6px; color: var(--text-muted); font-size: 0.7rem; padding: 0;
+  }
+  .order-btn:disabled { opacity: 0.35; }
+
+  .subject-delete {
+    width: 32px; height: 32px; border-radius: 8px; border: none;
+    background: #FDEDEE; color: var(--danger); font-size: 0.9rem; flex: 0 0 auto;
+  }
+
+  .toggle-switch { position: relative; width: 38px; height: 22px; flex: 0 0 auto; }
+  .toggle-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .toggle-track {
+    position: absolute; inset: 0; background: var(--border-strong);
+    border-radius: 999px; transition: background 0.15s ease;
+  }
+  .toggle-track::before {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; background: #fff; border-radius: 50%;
+    transition: transform 0.15s ease;
+  }
+  .toggle-switch input:checked + .toggle-track { background: var(--primary); }
+  .toggle-switch input:checked + .toggle-track::before { transform: translateX(16px); }
+
+  .add-subject-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .add-subject-input { margin-bottom: 0; }
+  .add-subject-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none;
+    background: var(--primary); color: #fff; font-size: 1.3rem; font-weight: 700;
+    flex: 0 0 auto; line-height: 1;
+  }
+  .add-subject-btn:active { background: var(--primary-dark); }
+
+  li.item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.92rem;
+  }
+  li.item:last-child { border-bottom: none; }
+  .item-main { min-width: 0; }
+  .item-title { font-weight: 600; }
+  .item-sub { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+  .item-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+
+  button, input, select { font: inherit; }
+
+  input, select {
+    width: 100%; min-height: 44px; padding: 8px 12px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); color: var(--text); margin-bottom: 10px;
+  }
+
+  input:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--primary); outline-offset: 1px;
+  }
+
+  .btn { min-height: 40px; padding: 0 14px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+  .btn-primary { width: 100%; min-height: 48px; background: var(--primary); color: #fff; font-size: 1rem; }
+  .btn-primary:active { background: var(--primary-dark); }
+  .btn-ghost { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); font-size: 0.8rem; }
+  .btn-danger { background: #FDEDEE; color: var(--danger); font-size: 0.8rem; }
+
+  .btn-secondary {
+    width: 100%; min-height: 44px; background: var(--surface);
+    border: 1px solid var(--border); color: var(--text-muted); margin-top: 6px;
+  }
+
+  .star-rating { display:flex; align-items:center; gap:2px; margin-bottom: 10px; }
+  .star-rating .star {
+    background:none; border:none; font-size:1.7rem; line-height:1;
+    color:#D8DCE6; padding:2px; min-height:36px; min-width:36px;
+  }
+  .star-rating .star.filled { color: var(--star); }
+  .star-rating .star-clear {
+    margin-left:8px; font-size:0.72rem; color:var(--text-muted);
+    background:none; border:1px solid var(--border); border-radius:8px;
+    padding:4px 8px; min-height:30px;
+  }
+
+  .unit-tabs {
+    display:flex; gap:4px; background:var(--bg); border-radius:10px;
+    padding:3px; margin-bottom:10px;
+  }
+  .unit-tabs button {
+    flex:1; border:none; background:none; border-radius:8px;
+    min-height:38px; font-weight:600; color:var(--text-muted);
+  }
+  .unit-tabs button.active {
+    background: var(--surface); color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  .stats-max-row { margin-bottom: 4px; }
+
+  .period-nav { display:flex; align-items:center; justify-content:center; gap:14px; margin: 2px 0 10px; }
+  .nav-arrow {
+    background:var(--bg); border:1px solid var(--border); border-radius:8px;
+    width:38px; height:38px; font-size:1.15rem; color:var(--text);
+  }
+  #stats-period-caption { font-size:0.88rem; color:var(--text-muted); min-width:130px; text-align:center; }
+
+  .stats-total { font-size: 1.15rem; font-weight: 800; color: var(--primary); margin: 4px 0 2px; text-align:center; }
+
+  .chart-wrap { position: relative; height: 220px; width: 100%; }
+  .chart-hint { font-size: 0.74rem; color: var(--text-muted); margin: 6px 0 0; text-align: center; }
+
+  nav.tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    display: flex; background: var(--surface); border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav.tabbar button {
+    flex: 1; background: none; border: none; padding: 10px 0 8px;
+    font-size: 0.72rem; color: var(--text-muted);
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  nav.tabbar button .icon { font-size: 1.2rem; }
+  nav.tabbar button.active { color: var(--primary); font-weight: 700; }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(15, 20, 30, 0.45);
+    display: none; z-index: 50;
+  }
+  .overlay.open { display: block; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    max-height: 75vh; overflow-y: auto;
+    background: var(--surface); border-radius: 18px 18px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .sheet h2 { display: flex; justify-content: space-between; align-items: center; }
+  .sheet-close { background: none; border: none; font-size: 1.3rem; color: var(--text-muted); min-height: 32px; padding: 0 6px; }
+  #detail-empty { color: var(--text-muted); font-size: 0.9rem; padding: 12px 0; }
+
+  .tier-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .tier-row:last-child { border-bottom:none; }
+  .tier-num { width:44px; font-weight:700; color:var(--primary); font-size:0.9rem; }
+  .tier-desc { font-size:0.85rem; color:var(--text-muted); }
+
+  .toggle-list-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 0; border-bottom:1px solid var(--border);
+  }
+  .toggle-list-row:last-child { border-bottom:none; }
+
+  .donut-row { display:flex; align-items:center; gap:18px; padding-top:4px; }
+  .donut-legend { display:flex; flex-direction:column; gap:8px; }
+  .donut-legend-item { display:flex; align-items:center; gap:8px; font-size:0.82rem; }
+  .donut-dot { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <h1>学習記録</h1>
+  <p>Googleアカウントでログインしてください</p>
+  <div id="google-signin-button"></div>
+  <div id="login-error"></div>
+</div>
+
+<!-- アプリ本体(ログイン後に表示) -->
+<div id="app-shell">
+
+<header>
+  <h1>学習記録</h1>
+  <div class="header-user">
+    <img id="header-user-avatar" src="" alt="" style="display:none;">
+    <button type="button" class="logout-btn" id="logout-btn">ログアウト</button>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel active" id="panel-record">
+    <div class="card">
+      <div class="card-head">
+        <h2 id="log-form-title">学習ログを記録</h2>
+        <button type="button" class="info-btn" id="log-tips-btn" aria-label="効果的な書き方のヒント">?</button>
+      </div>
+      <form id="log-form">
+        <select id="log-subject-id" required></select>
+        <input type="date" id="log-date" required>
+        <input type="number" id="log-minutes" placeholder="学習時間(分)" required>
+        <input type="text" id="log-memo" placeholder="学習内容(任意)">
+
+        <label class="field-label">自己採点(任意)</label>
+        <div class="star-rating" id="log-recall-stars">
+          <button type="button" class="star" data-value="1">☆</button>
+          <button type="button" class="star" data-value="2">☆</button>
+          <button type="button" class="star" data-value="3">☆</button>
+          <button type="button" class="star" data-value="4">☆</button>
+          <button type="button" class="star" data-value="5">☆</button>
+          <button type="button" class="star-clear" id="log-recall-clear">クリア</button>
+        </div>
+        <input type="hidden" id="log-recall-score" value="">
+
+        <input type="hidden" id="log-edit-id" value="">
+        <button type="submit" class="btn-primary" id="log-submit-btn">記録する</button>
+        <button type="button" class="btn-secondary" id="log-cancel-btn" style="display:none;">編集をやめる</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>科目</h2>
+        <button type="button" class="info-btn" id="challenge-info-btn" aria-label="チャレンジ機能について">?</button>
+      </div>
+      <ul id="subject-list"></ul>
+
+      <div class="add-subject-row">
+        <input type="text" id="subject-name" placeholder="科目名を入力" class="add-subject-input">
+        <button type="button" class="add-subject-btn" id="subject-add-btn" aria-label="科目を追加">+</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-stats">
+    <div class="card">
+      <div class="unit-tabs" id="unit-tabs">
+        <button type="button" data-unit="day" class="active">日</button>
+        <button type="button" data-unit="week">週</button>
+        <button type="button" data-unit="month">月</button>
+        <button type="button" data-unit="year">年</button>
+      </div>
+
+      <div class="stats-max-row">
+        <input type="number" id="stats-max" placeholder="Y軸最大(h)">
+      </div>
+
+      <p class="stats-total" id="stats-total">合計: -</p>
+      <div class="period-nav">
+        <button type="button" class="nav-arrow" id="period-prev">‹</button>
+        <span id="stats-period-caption"></span>
+        <button type="button" class="nav-arrow" id="period-next">›</button>
+      </div>
+
+      <div class="chart-wrap"><canvas id="period-chart"></canvas></div>
+      <p class="chart-hint">棒をタップするとその日の詳細を確認できます</p>
+    </div>
+
+    <div class="card">
+      <h2>科目別の割合</h2>
+      <div id="subject-donut"></div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button type="button" data-tab="record" class="active"><span class="icon">✎</span>記録</button>
+  <button type="button" data-tab="stats"><span class="icon">◔</span>集計</button>
+</nav>
+
+<div class="overlay" id="detail-overlay">
+  <div class="sheet">
+    <h2><span id="detail-title">詳細</span><button type="button" class="sheet-close" id="detail-close">×</button></h2>
+    <div id="detail-empty" style="display:none;">この日の記録はありません</div>
+    <ul id="detail-list"></ul>
+  </div>
+</div>
+
+<div class="overlay" id="info-overlay">
+  <div class="sheet">
+    <h2><span>チャレンジ機能とは</span><button type="button" class="sheet-close" id="info-close">×</button></h2>
+    <p style="font-size:0.88rem; color:var(--text-muted); margin-top:0;">
+      科目ごとの累計学習時間にあわせて、5段階のチャレンジが自動的に切り替わります。一気に10000時間を目指すのではなく、まず20時間から少しずつ進めていく仕組みです。
+    </p>
+    <div>
+      <div class="tier-row"><div class="tier-num">20h</div><div class="tier-desc">実用に足る水準に近づく目安です</div></div>
+      <div class="tier-row"><div class="tier-num">100h</div><div class="tier-desc">継続の習慣がついてくる区切りです</div></div>
+      <div class="tier-row"><div class="tier-num">1000h</div><div class="tier-desc">しっかりした基礎ができてくる目安です</div></div>
+      <div class="tier-row"><div class="tier-num">5000h</div><div class="tier-desc">かなり深い専門性に近づく目安です</div></div>
+      <div class="tier-row"><div class="tier-num">10000h</div><div class="tier-desc">熟達の目安としてよく言及される数字です</div></div>
+    </div>
+    <p style="font-size:0.72rem; color:var(--text-muted); margin-top:10px;">
+      20時間・10000時間は学習研究でよく参照される目安ですが、100/1000/5000時間は区切りの良いマイルストーンとして設定したものです。時間数が目的化しないよう、あくまで目安としてご利用ください。
+    </p>
+
+    <div style="border-top:1px solid var(--border); margin-top:14px; padding-top:10px;">
+      <p style="font-size:0.85rem; font-weight:700; margin:0 0 4px;">科目ごとのON/OFF</p>
+      <p style="font-size:0.72rem; color:var(--text-muted); margin:0 0 8px;">OFFにした科目は一覧でチャレンジ表示・合計時間を出しません</p>
+      <div id="info-subject-toggles"></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="tips-overlay">
+  <div class="sheet">
+    <h2><span>効果的な書き方のヒント</span><button type="button" class="sheet-close" id="tips-close">×</button></h2>
+
+    <p style="font-size:0.85rem; font-weight:700; margin:14px 0 4px;">学習内容欄</p>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">
+      教材を見ながら書き写すより、教材を閉じて「今日学んだことを人に説明するなら」という前提で書く方が、記憶への定着効果が高いとされています。短い一言でも、思い出しながら書くこと自体が復習になります。
+    </p>
+
+    <p style="font-size:0.85rem; font-weight:700; margin:14px 0 4px;">自己採点欄</p>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">
+      その日どれだけ思い出せたか、理解できたかを自分で採点するものです。テストの点数ではなく、あくまで本人の手応えの記録です。点数が低い日が続く科目は、復習を優先する目印として使えます。
+    </p>
+
+    <p style="font-size:0.72rem; color:var(--text-muted); margin-top:12px;">
+      いずれも学習研究でよく参照される考え方(想起練習・自己説明効果)を参考にしていますが、効果には個人差があります。
+    </p>
+  </div>
+</div>
+
+</div><!-- /#app-shell -->
+
+<script>
+  const API_BASE = "http://localhost:8787";
+  // 【要書き換え】Google Cloud ConsoleでOAuthクライアントIDを発行後、ここに設定する
+  const GOOGLE_CLIENT_ID = "749503799005-agnfp418a1fpp6op73sbg0k7hjsvokpe.apps.googleusercontent.com";
+
+  const TIERS = [20, 100, 1000, 5000, 10000];
+  const DONUT_COLORS = ["#378ADD", "#1D9E75", "#D85A30", "#D4537E", "#7F77DD", "#BA7517", "#639922"];
+
+  let subjectsCache = [];
+  let periodChart = null;
+  let statsMaxManuallySet = false;
+  let currentPeriodData = [];
+  let currentDetailDate = null;
+  let currentUnit = "day";
+  let currentRefDate = null;
+  let editingSubjectId = null;
+
+  let sessionToken = sessionStorage.getItem("session_token");
+  let currentUser = null;
+
+  const DEFAULT_MAX_HOURS = { day: 5, week: 5, month: 5, year: 120 };
+
+  // ---------- 認証つきfetchラッパー ----------
+  async function apiFetch(path, options = {}) {
+    const headers = { ...(options.headers || {}), Authorization: `Bearer ${sessionToken}` };
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+    if (res.status === 401) {
+      logout();
+      throw new Error("認証切れのためログアウトしました");
+    }
+
+    return res;
+  }
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  function formatHM(totalMinutes) {
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}:${pad2(m)}`;
+  }
+
+  function monthDay(dateStr) {
+    const [, m, d] = dateStr.split("-").map(Number);
+    return `${m}/${d}`;
+  }
+
+  function todayLocalStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+
+  function parseDateStr(s) {
+    const [y, m, d] = s.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+  }
+
+  function toDateStrUTC(d) {
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+  }
+
+  function stepRefDate(unit, dateStr, direction) {
+    const d = parseDateStr(dateStr);
+    if (unit === "day") d.setUTCDate(d.getUTCDate() + direction);
+    if (unit === "week") d.setUTCDate(d.getUTCDate() + 7 * direction);
+    if (unit === "month") d.setUTCMonth(d.getUTCMonth() + direction);
+    if (unit === "year") d.setUTCFullYear(d.getUTCFullYear() + direction);
+    return toDateStrUTC(d);
+  }
+
+  // ---------- チャレンジ計算 ----------
+  function getTierInfo(totalMinutes) {
+    const totalHours = totalMinutes / 60;
+    for (let i = 0; i < TIERS.length; i++) {
+      const prevTier = i === 0 ? 0 : TIERS[i - 1];
+      if (totalHours < TIERS[i]) {
+        const progress = (totalHours - prevTier) / (TIERS[i] - prevTier);
+        return { tierHours: TIERS[i], progress: Math.max(0, Math.min(1, progress)), completed: false };
+      }
+    }
+    return { tierHours: TIERS[TIERS.length - 1], progress: 1, completed: true };
+  }
+
+  function ringSVG(totalMinutes) {
+    const info = getTierInfo(totalMinutes);
+    const circumference = 113;
+    const offset = circumference * (1 - info.progress);
+    const percent = Math.round(info.progress * 100);
+    const color = info.completed ? "var(--success)" : "var(--primary)";
+
+    return `
+      <svg width="40" height="40" viewBox="0 0 44 44">
+        <circle cx="22" cy="22" r="18" fill="none" stroke="var(--border)" stroke-width="5"></circle>
+        <circle cx="22" cy="22" r="18" fill="none" stroke="${color}" stroke-width="5"
+          stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
+          transform="rotate(-90 22 22)"></circle>
+        <text x="22" y="26" text-anchor="middle" font-size="10" font-weight="700" fill="var(--text)">${percent}%</text>
+      </svg>
+    `;
+  }
+
+  function tierLabel(totalMinutes) {
+    const info = getTierInfo(totalMinutes);
+    return info.completed ? "10000h達成" : `${info.tierHours}hチャレンジ`;
+  }
+
+  // ---------- 科目別割合ドーナツ(自作SVG) ----------
+  function renderSubjectDonut(bySubject) {
+    const container = document.getElementById("subject-donut");
+    const total = bySubject.reduce((sum, s) => sum + s.total_minutes, 0);
+
+    if (total === 0) {
+      container.innerHTML = `<p style="font-size:0.85rem;color:var(--text-muted);text-align:center;padding:16px 0;">まだ記録がありません</p>`;
+      return;
+    }
+
+    const gap = 2;
+    let cumulative = 0;
+
+    const segments = bySubject.map((s, i) => {
+      const percent = (s.total_minutes / total) * 100;
+      const effective = Math.max(percent - gap, 0.5);
+      const offset = 100 - cumulative + 25;
+      cumulative += percent;
+      return { color: DONUT_COLORS[i % DONUT_COLORS.length], percent, effective, offset, name: s.subject_name };
+    });
+
+    const circles = segments.map(seg => `
+      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="${seg.color}" stroke-width="3.6"
+        stroke-linecap="round" stroke-dasharray="${seg.effective} ${100 - seg.effective}"
+        stroke-dashoffset="${seg.offset}"></circle>
+    `).join("");
+
+    const legend = segments.map(seg => `
+      <div class="donut-legend-item">
+        <span class="donut-dot" style="background:${seg.color};"></span>
+        <span>${seg.name} ${Math.round(seg.percent)}%</span>
+      </div>
+    `).join("");
+
+    container.innerHTML = `
+      <div class="donut-row">
+        <svg width="92" height="92" viewBox="0 0 36 36" style="flex-shrink:0;">
+          ${circles}
+          <text x="18" y="17" text-anchor="middle" font-size="4.4" font-weight="700" fill="var(--text)">${formatHM(total)}</text>
+          <text x="18" y="22" text-anchor="middle" font-size="2.6" fill="var(--text-muted)">合計</text>
+        </svg>
+        <div class="donut-legend">${legend}</div>
+      </div>
+    `;
+  }
+
+  // ---------- 下部タブ切替 ----------
+  document.querySelectorAll("nav.tabbar button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("nav.tabbar button").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(`panel-${btn.dataset.tab}`).classList.add("active");
+      if (btn.dataset.tab === "stats") loadStats();
+    });
+  });
+
+  // ---------- 集計単位タブ ----------
+  document.querySelectorAll("#unit-tabs button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#unit-tabs button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentUnit = btn.dataset.unit;
+      currentRefDate = null;
+      statsMaxManuallySet = false;
+      loadStats();
+    });
+  });
+
+  document.getElementById("period-prev").addEventListener("click", () => {
+    currentRefDate = stepRefDate(currentUnit, currentRefDate, -1);
+    loadStats();
+  });
+  document.getElementById("period-next").addEventListener("click", () => {
+    currentRefDate = stepRefDate(currentUnit, currentRefDate, 1);
+    loadStats();
+  });
+
+  // ---------- 星評価 ----------
+  function renderStars(selected) {
+    document.querySelectorAll("#log-recall-stars .star").forEach(btn => {
+      const v = Number(btn.dataset.value);
+      const filled = v <= selected;
+      btn.textContent = filled ? "★" : "☆";
+      btn.classList.toggle("filled", filled);
+    });
+  }
+
+  document.querySelectorAll("#log-recall-stars .star").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById("log-recall-score").value = btn.dataset.value;
+      renderStars(Number(btn.dataset.value));
+    });
+  });
+
+  document.getElementById("log-recall-clear").addEventListener("click", () => {
+    document.getElementById("log-recall-score").value = "";
+    renderStars(0);
+  });
+
+  function starsText(score) {
+    if (score === null || score === undefined) return "自己採点: -";
+    return "自己採点: " + "★".repeat(score) + "☆".repeat(5 - score);
+  }
+
+  // ---------- 学習ログのヒントドロワー ----------
+  document.getElementById("log-tips-btn").addEventListener("click", () => {
+    document.getElementById("tips-overlay").classList.add("open");
+  });
+  document.getElementById("tips-close").addEventListener("click", () => {
+    document.getElementById("tips-overlay").classList.remove("open");
+  });
+  document.getElementById("tips-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "tips-overlay") document.getElementById("tips-overlay").classList.remove("open");
+  });
+
+  // ---------- 情報ドロワー(チャレンジ説明 + ON/OFF設定) ----------
+  function renderInfoToggles() {
+    const container = document.getElementById("info-subject-toggles");
+
+    container.innerHTML = subjectsCache.map(s => `
+      <div class="toggle-list-row">
+        <span style="font-size:0.88rem;">${s.name}</span>
+        <label class="toggle-switch" aria-label="チャレンジ機能">
+          <input type="checkbox" data-toggle-challenge="${s.id}" ${s.challenge_enabled ? "checked" : ""}>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    `).join("");
+
+    container.querySelectorAll("[data-toggle-challenge]").forEach(el => {
+      el.addEventListener("change", async () => {
+        await apiFetch(`/subjects/${el.dataset.toggleChallenge}/challenge`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: el.checked }),
+        });
+        await loadSubjects();
+      });
+    });
+  }
+
+  function openInfoDrawer() {
+    renderInfoToggles();
+    document.getElementById("info-overlay").classList.add("open");
+  }
+
+  document.getElementById("challenge-info-btn").addEventListener("click", openInfoDrawer);
+  document.getElementById("info-close").addEventListener("click", () => {
+    document.getElementById("info-overlay").classList.remove("open");
+  });
+  document.getElementById("info-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "info-overlay") document.getElementById("info-overlay").classList.remove("open");
+  });
+
+  // ---------- 科目 ----------
+  async function loadSubjects() {
+    subjectsCache = await apiFetch("/subjects").then(r => r.json());
+    renderSubjectList();
+
+    const select = document.getElementById("log-subject-id");
+    select.innerHTML = subjectsCache.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+  }
+
+  function renderSubjectList() {
+    const list = document.getElementById("subject-list");
+
+    list.innerHTML = subjectsCache.map((s, idx) => `
+      <li class="subject-row">
+        ${s.challenge_enabled
+          ? `<div class="subject-ring" data-open-info="1">${ringSVG(s.total_minutes)}</div>`
+          : `<div style="width:40px;flex-shrink:0;"></div>`
+        }
+        <div class="subject-main">
+          ${editingSubjectId === s.id
+            ? `<input type="text" class="subject-name-input" id="subject-edit-input" value="${s.name}">`
+            : `<div class="subject-name-text" data-edit-subject="${s.id}">${s.name}</div>`
+          }
+          ${s.challenge_enabled
+            ? `<div class="subject-sub">${tierLabel(s.total_minutes)} ・ ${formatHM(s.total_minutes)}</div>`
+            : ""
+          }
+        </div>
+        <div class="subject-order">
+          <button type="button" class="order-btn" data-move="${s.id}:up" ${idx === 0 ? "disabled" : ""}>▲</button>
+          <button type="button" class="order-btn" data-move="${s.id}:down" ${idx === subjectsCache.length - 1 ? "disabled" : ""}>▼</button>
+        </div>
+        <button type="button" class="subject-delete" data-delete-subject="${s.id}" aria-label="削除">🗑</button>
+      </li>
+    `).join("");
+
+    list.querySelectorAll("[data-open-info]").forEach(el => {
+      el.addEventListener("click", openInfoDrawer);
+    });
+
+    list.querySelectorAll("[data-edit-subject]").forEach(el => {
+      el.addEventListener("click", () => {
+        editingSubjectId = Number(el.dataset.editSubject);
+        renderSubjectList();
+        const input = document.getElementById("subject-edit-input");
+        input.focus();
+        input.select();
+
+        input.addEventListener("blur", () => saveSubjectName(editingSubjectId, input.value));
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") input.blur();
+          if (e.key === "Escape") { editingSubjectId = null; renderSubjectList(); }
+        });
+      });
+    });
+
+    list.querySelectorAll("[data-move]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const [id, direction] = btn.dataset.move.split(":");
+        await apiFetch(`/subjects/${id}/move`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ direction }),
+        });
+        await loadSubjects();
+      });
+    });
+
+    list.querySelectorAll("[data-delete-subject]").forEach(btn => {
+      btn.addEventListener("click", () => deleteSubject(btn.dataset.deleteSubject));
+    });
+  }
+
+  async function saveSubjectName(id, name) {
+    const trimmed = name.trim();
+    editingSubjectId = null;
+
+    if (trimmed === "") {
+      await loadSubjects();
+      return;
+    }
+
+    const res = await apiFetch(`/subjects/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error);
+    }
+
+    await loadSubjects();
+  }
+
+  async function deleteSubject(id) {
+    const res = await apiFetch(`/subjects/${id}`, { method: "DELETE" });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error);
+      return;
+    }
+
+    await loadSubjects();
+  }
+
+  document.getElementById("subject-add-btn").addEventListener("click", async () => {
+    const input = document.getElementById("subject-name");
+    const name = input.value.trim();
+    if (name === "") return;
+
+    await apiFetch("/subjects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+
+    input.value = "";
+    await loadSubjects();
+  });
+
+  document.getElementById("subject-name").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("subject-add-btn").click();
+  });
+
+  // ---------- 学習ログのフォーム ----------
+  function startEditLog(log) {
+    closeDetail();
+
+    document.getElementById("log-form-title").textContent = `学習ログを編集(ID: ${log.id})`;
+    document.getElementById("log-edit-id").value = log.id;
+    document.getElementById("log-subject-id").value = log.subject_id;
+    document.getElementById("log-date").value = log.studied_on;
+    document.getElementById("log-minutes").value = log.minutes;
+    document.getElementById("log-memo").value = log.memo ?? "";
+    document.getElementById("log-recall-score").value = log.recall_score ?? "";
+    renderStars(log.recall_score ?? 0);
+    document.getElementById("log-submit-btn").textContent = "更新する";
+    document.getElementById("log-cancel-btn").style.display = "block";
+
+    document.querySelectorAll("nav.tabbar button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    document.querySelector('[data-tab="record"]').classList.add("active");
+    document.getElementById("panel-record").classList.add("active");
+  }
+
+  function resetLogForm() {
+    document.getElementById("log-form-title").textContent = "学習ログを記録";
+    document.getElementById("log-edit-id").value = "";
+    document.getElementById("log-form").reset();
+    document.getElementById("log-date").value = todayLocalStr();
+    document.getElementById("log-recall-score").value = "";
+    renderStars(0);
+    document.getElementById("log-submit-btn").textContent = "記録する";
+    document.getElementById("log-cancel-btn").style.display = "none";
+  }
+
+  async function deleteLogFromDetail(id) {
+    await apiFetch(`/study_logs/${id}`, { method: "DELETE" });
+    await loadSubjects();
+    await loadStats();
+    if (currentDetailDate) await openDetail(currentDetailDate, document.getElementById("detail-title").dataset.label);
+  }
+
+  // ---------- 日別詳細モーダル ----------
+  async function openDetail(date, label) {
+    currentDetailDate = date;
+    document.getElementById("detail-title").textContent = label ?? date;
+    document.getElementById("detail-title").dataset.label = label ?? date;
+
+    const logs = await apiFetch(`/study_logs?date=${date}`).then(r => r.json());
+
+    const list = document.getElementById("detail-list");
+    const empty = document.getElementById("detail-empty");
+
+    if (logs.length === 0) {
+      list.innerHTML = "";
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      list.innerHTML = logs.map(l => `
+        <li class="item">
+          <div class="item-main">
+            <div class="item-title">${l.subject_name} / ${formatHM(l.minutes)}</div>
+            <div class="item-sub">${l.memo ?? ""} ・ ${starsText(l.recall_score)}</div>
+          </div>
+          <div class="item-actions">
+            <button type="button" class="btn btn-ghost" data-edit-log='${JSON.stringify(l)}'>編集</button>
+            <button type="button" class="btn btn-danger" data-delete-log="${l.id}">削除</button>
+          </div>
+        </li>
+      `).join("");
+
+      list.querySelectorAll("[data-edit-log]").forEach(btn => {
+        btn.addEventListener("click", () => startEditLog(JSON.parse(btn.dataset.editLog)));
+      });
+      list.querySelectorAll("[data-delete-log]").forEach(btn => {
+        btn.addEventListener("click", () => deleteLogFromDetail(btn.dataset.deleteLog));
+      });
+    }
+
+    document.getElementById("detail-overlay").classList.add("open");
+  }
+
+  function closeDetail() {
+    document.getElementById("detail-overlay").classList.remove("open");
+    currentDetailDate = null;
+  }
+
+  document.getElementById("detail-close").addEventListener("click", closeDetail);
+  document.getElementById("detail-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "detail-overlay") closeDetail();
+  });
+
+  // ---------- 集計(棒グラフ) ----------
+  function buildXTicksCallback(unit, labels) {
+    if (unit === "month") {
+      const len = labels.length;
+      const step = Math.max(1, Math.round((len - 1) / 6));
+      return (value, index) => (index === 0 || index === len - 1 || index % step === 0) ? labels[index] : "";
+    }
+    if (unit === "year") {
+      return (value, index) => (index % 2 === 0) ? labels[index] : "";
+    }
+    return undefined;
+  }
+
+  function buildPeriodCaption(unit, byPeriod) {
+    if (byPeriod.length === 0) return "";
+    if (unit === "day") return byPeriod[0].label;
+    if (unit === "week") return `${monthDay(byPeriod[0].date)}-${monthDay(byPeriod[byPeriod.length - 1].date)}`;
+    if (unit === "month") {
+      const [y, m] = byPeriod[0].date.split("-");
+      return `${y}年${Number(m)}月`;
+    }
+    if (unit === "year") return `${byPeriod[0].date.split("-")[0]}年`;
+    return "";
+  }
+
+  async function loadStats() {
+    if (!statsMaxManuallySet) {
+      document.getElementById("stats-max").value = DEFAULT_MAX_HOURS[currentUnit];
+    }
+
+    const maxHours = Number(document.getElementById("stats-max").value);
+    const yMaxMinutes = maxHours > 0 ? maxHours * 60 : undefined;
+
+    const refQuery = currentRefDate ? `&ref=${currentRefDate}` : "";
+    const byPeriod = await apiFetch(`/stats/by_period?unit=${currentUnit}${refQuery}`).then(r => r.json());
+    const bySubject = await apiFetch("/stats/by_subject").then(r => r.json());
+
+    currentPeriodData = byPeriod;
+
+    if (byPeriod.length > 0) {
+      if (currentUnit === "day") currentRefDate = byPeriod[0].date;
+      if (currentUnit === "week") currentRefDate = byPeriod[0].date;
+      if (currentUnit === "month") currentRefDate = byPeriod[0].date;
+      if (currentUnit === "year") currentRefDate = byPeriod[0].date.slice(0, 4) + "-01-01";
+    }
+
+    const total = byPeriod.reduce((sum, p) => sum + (p.total_minutes ?? 0), 0);
+    document.getElementById("stats-total").textContent = `合計: ${formatHM(total)}`;
+    document.getElementById("stats-period-caption").textContent = buildPeriodCaption(currentUnit, byPeriod);
+
+    const labels = byPeriod.map(p => p.label);
+    const xTicksCallback = buildXTicksCallback(currentUnit, labels);
+
+    if (periodChart) periodChart.destroy();
+    periodChart = new Chart(document.getElementById("period-chart"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{ label: "学習時間", data: byPeriod.map(p => p.total_minutes), backgroundColor: "#3452DB" }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        onClick: (evt, elements) => {
+          if (!elements.length) return;
+          const idx = elements[0].index;
+          const target = currentPeriodData[idx];
+          if (target) openDetail(target.date, target.label ?? target.date);
+        },
+        scales: {
+          x: {
+            ticks: xTicksCallback
+              ? { callback: xTicksCallback, autoSkip: false, maxRotation: 0 }
+              : { autoSkip: false, maxRotation: 0 },
+          },
+          y: {
+            beginAtZero: true,
+            max: yMaxMinutes,
+            ticks: { callback: (value) => formatHM(value) },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => formatHM(ctx.parsed.y) } },
+        },
+      },
+    });
+
+    renderSubjectDonut(bySubject);
+  }
+
+  document.getElementById("stats-max").addEventListener("input", () => {
+    statsMaxManuallySet = true;
+    loadStats();
+  });
+
+  document.getElementById("log-cancel-btn").addEventListener("click", resetLogForm);
+
+  document.getElementById("log-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const editId = document.getElementById("log-edit-id").value;
+
+    const body = {
+      subject_id: Number(document.getElementById("log-subject-id").value),
+      studied_on: document.getElementById("log-date").value,
+      minutes: Number(document.getElementById("log-minutes").value),
+      memo: document.getElementById("log-memo").value,
+      recall_score: document.getElementById("log-recall-score").value || null,
+    };
+
+    const url = editId ? `/study_logs/${editId}` : "/study_logs";
+    const method = editId ? "PUT" : "POST";
+
+    const res = await apiFetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.error);
+      return;
+    }
+
+    resetLogForm();
+    await loadSubjects();
+    await loadStats();
+  });
+
+  // ---------- Google認証 ----------
+
+  async function handleCredentialResponse(response) {
+    document.getElementById("login-error").textContent = "";
+
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+    } catch {
+      document.getElementById("login-error").textContent = "サーバーに接続できませんでした";
+      return;
+    }
+
+    if (!res.ok) {
+      document.getElementById("login-error").textContent = "ログインに失敗しました";
+      return;
+    }
+
+    const data = await res.json();
+    sessionToken = data.token;
+    currentUser = data.user;
+    sessionStorage.setItem("session_token", sessionToken);
+    showApp();
+  }
+
+  function initGoogleSignIn() {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+    });
+    google.accounts.id.renderButton(document.getElementById("google-signin-button"), {
+      theme: "outline",
+      size: "large",
+      width: 280,
+    });
+  }
+
+  function logout() {
+    sessionToken = null;
+    currentUser = null;
+    sessionStorage.removeItem("session_token");
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.disableAutoSelect();
+    }
+    showLogin();
+  }
+
+  document.getElementById("logout-btn").addEventListener("click", logout);
+
+  function showLogin() {
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("app-shell").style.display = "none";
+  }
+
+  async function showApp() {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app-shell").style.display = "block";
+
+    const avatar = document.getElementById("header-user-avatar");
+    if (currentUser && currentUser.avatar_url) {
+      avatar.src = currentUser.avatar_url;
+      avatar.style.display = "block";
+    }
+
+    document.getElementById("log-date").value = todayLocalStr();
+    await loadSubjects();
+  }
+
+  // ---------- 初期表示 ----------
+  window.addEventListener("load", () => {
+    initGoogleSignIn();
+    if (sessionToken) {
+      showApp();
+    } else {
+      showLogin();
+    }
+  });
+</script>
+</body>
+</html>
