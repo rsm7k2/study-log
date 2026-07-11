@@ -152,10 +152,10 @@
   }
 
   input[type="date"] {
-  min-width: 0;
-  max-width: 100%;
-  -webkit-appearance: none;
-  appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   input:focus, select:focus, button:focus-visible {
@@ -240,6 +240,16 @@
   .sheet-close { background: none; border: none; font-size: 1.3rem; color: var(--text-muted); min-height: 32px; padding: 0 6px; }
   #detail-empty { color: var(--text-muted); font-size: 0.9rem; padding: 12px 0; }
 
+  .overlay.center-modal.open {
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .overlay.center-modal .sheet {
+    position: relative; left: auto; right: auto; bottom: auto;
+    width: 100%; max-width: 420px; max-height: 80vh;
+    border-radius: 18px;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+
   .tier-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
   .tier-row:last-child { border-bottom:none; }
   .tier-num { width:44px; font-weight:700; color:var(--primary); font-size:0.9rem; }
@@ -251,7 +261,7 @@
   }
   .toggle-list-row:last-child { border-bottom:none; }
 
-  .donut-row { display:flex; align-items:center; gap:18px; padding-top:4px; }
+  .donut-row { display:flex; align-items:center; justify-content:center; gap:18px; padding-top:4px; }
   .donut-legend { display:flex; flex-direction:column; gap:8px; }
   .donut-legend-item { display:flex; align-items:center; gap:8px; font-size:0.82rem; }
   .donut-dot { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
@@ -368,7 +378,7 @@
   </div>
 </div>
 
-<div class="overlay" id="info-overlay">
+<div class="overlay center-modal" id="info-overlay">
   <div class="sheet">
     <h2><span>チャレンジ機能とは</span><button type="button" class="sheet-close" id="info-close">×</button></h2>
     <p style="font-size:0.88rem; color:var(--text-muted); margin-top:0;">
@@ -393,7 +403,7 @@
   </div>
 </div>
 
-<div class="overlay" id="tips-overlay">
+<div class="overlay center-modal" id="tips-overlay">
   <div class="sheet">
     <h2><span>効果的な書き方のヒント</span><button type="button" class="sheet-close" id="tips-close">×</button></h2>
 
@@ -421,7 +431,15 @@
   const GOOGLE_CLIENT_ID = "749503799005-agnfp418a1fpp6op73sbg0k7hjsvokpe.apps.googleusercontent.com";
 
   const TIERS = [20, 100, 1000, 5000, 10000];
-  const DONUT_COLORS = ["#378ADD", "#1D9E75", "#D85A30", "#D4537E", "#7F77DD", "#BA7517", "#639922"];
+  const DONUT_COLORS = [
+    "rgba(99,102,241,0.8)",
+    "rgba(20,184,166,0.8)",
+    "rgba(251,146,60,0.8)",
+    "rgba(244,114,182,0.8)",
+    "rgba(96,165,250,0.8)",
+    "rgba(163,163,163,0.8)",
+    "rgba(163,230,53,0.8)"
+  ];
 
   let subjectsCache = [];
   let periodChart = null;
@@ -532,20 +550,18 @@
       return;
     }
 
-    const gap = 2;
     let cumulative = 0;
 
     const segments = bySubject.map((s, i) => {
       const percent = (s.total_minutes / total) * 100;
-      const effective = Math.max(percent - gap, 0.5);
       const offset = 100 - cumulative + 25;
       cumulative += percent;
-      return { color: DONUT_COLORS[i % DONUT_COLORS.length], percent, effective, offset, name: s.subject_name };
+      return { color: DONUT_COLORS[i % DONUT_COLORS.length], percent, offset, name: s.subject_name };
     });
 
     const circles = segments.map(seg => `
       <circle cx="18" cy="18" r="15.9155" fill="none" stroke="${seg.color}" stroke-width="3.6"
-        stroke-linecap="round" stroke-dasharray="${seg.effective} ${100 - seg.effective}"
+        stroke-dasharray="${seg.percent} ${100 - seg.percent}"
         stroke-dashoffset="${seg.offset}"></circle>
     `).join("");
 
