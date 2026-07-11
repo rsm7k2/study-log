@@ -34,8 +34,26 @@
   header { padding: 20px 16px 12px; display: flex; align-items: center; justify-content: space-between; }
   header h1 { margin: 0; font-size: 1.3rem; font-weight: 800; }
   .header-user { display: flex; align-items: center; gap: 8px; }
-  .header-user img { width: 28px; height: 28px; border-radius: 50%; }
+  .header-user img { width: 28px; height: 28px; border-radius: 50%; display: block; }
   .logout-btn { background: none; border: none; color: var(--text-muted); font-size: 0.78rem; padding: 4px 6px; }
+
+  .account-wrap { position: relative; }
+  .avatar-btn {
+    width: 28px; height: 28px; border-radius: 50%; padding: 0; border: none;
+    background: var(--bg); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .account-menu {
+    position: absolute; top: 36px; right: 0; z-index: 60;
+    min-width: 160px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; box-shadow: 0 6px 18px rgba(20, 24, 35, 0.12);
+    padding: 6px; display: none;
+  }
+  .account-menu.open { display: block; }
+  .account-menu button {
+    width: 100%; text-align: left; background: none; border: none;
+    padding: 9px 10px; font-size: 0.85rem; color: var(--text); border-radius: 6px; min-height: auto;
+  }
+  .account-menu button:active { background: var(--bg); }
 
   main { padding: 0 16px 24px; }
 
@@ -55,6 +73,17 @@
   #login-screen h1 { font-size: 1.4rem; margin: 0; }
   #login-screen p { color: var(--text-muted); font-size: 0.88rem; margin: 0 0 8px; }
   #login-error { color: var(--danger); font-size: 0.82rem; min-height: 1.2em; }
+
+  .login-lead { font-size: 0.92rem; color: var(--text-muted); margin: -8px 0 4px; max-width: 320px; }
+  .login-philosophy {
+    display: flex; flex-direction: column; gap: 14px; text-align: left;
+    max-width: 320px; width: 100%; margin: 4px 0 8px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px;
+  }
+  .login-philosophy-item { display: flex; gap: 12px; align-items: flex-start; }
+  .login-philosophy-icon { font-size: 1.2rem; color: var(--primary); flex-shrink: 0; line-height: 1.4; }
+  .login-philosophy-title { font-size: 0.86rem; font-weight: 700; margin: 0 0 2px; }
+  .login-philosophy-desc { font-size: 0.76rem; color: var(--text-muted); margin: 0; }
 
   #app-shell { display: none; }
 
@@ -272,6 +301,32 @@
 <!-- ログイン画面 -->
 <div id="login-screen">
   <h1>学習記録</h1>
+  <p class="login-lead">日々の学習を記録し、積み重ねを実感するためのアプリです。</p>
+
+  <div class="login-philosophy">
+    <div class="login-philosophy-item">
+      <span class="login-philosophy-icon">◔</span>
+      <div>
+        <p class="login-philosophy-title">10000時間ではなく、まず20時間から</p>
+        <p class="login-philosophy-desc">5段階のチャレンジで、小さな区切りを積み重ねます</p>
+      </div>
+    </div>
+    <div class="login-philosophy-item">
+      <span class="login-philosophy-icon">✎</span>
+      <div>
+        <p class="login-philosophy-title">点数ではなく、手応えを記録</p>
+        <p class="login-philosophy-desc">自己採点は評価ではなく、復習の目印です</p>
+      </div>
+    </div>
+    <div class="login-philosophy-item">
+      <span class="login-philosophy-icon">◎</span>
+      <div>
+        <p class="login-philosophy-title">思い出しながら書くことが復習になる</p>
+        <p class="login-philosophy-desc">想起練習・自己説明効果を意識した記録欄です</p>
+      </div>
+    </div>
+  </div>
+
   <p>Googleアカウントでログインしてください</p>
   <div id="google-signin-button"></div>
   <div id="login-error"></div>
@@ -283,7 +338,14 @@
 <header>
   <h1>学習記録</h1>
   <div class="header-user">
-    <img id="header-user-avatar" src="" alt="" style="display:none;">
+    <div class="account-wrap">
+      <button type="button" class="avatar-btn" id="account-menu-btn" aria-label="アカウントメニュー">
+        <img id="header-user-avatar" src="" alt="" style="display:none;">
+      </button>
+      <div class="account-menu" id="account-menu">
+        <button type="button" id="super-reload-btn">スーパーリロード</button>
+      </div>
+    </div>
     <button type="button" class="logout-btn" id="logout-btn">ログアウト</button>
   </div>
 </header>
@@ -1092,6 +1154,25 @@
   }
 
   document.getElementById("logout-btn").addEventListener("click", logout);
+
+  // ---------- アカウントメニュー(スーパーリロード) ----------
+  const accountMenuBtn = document.getElementById("account-menu-btn");
+  const accountMenu = document.getElementById("account-menu");
+
+  accountMenuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    accountMenu.classList.toggle("open");
+  });
+
+  document.addEventListener("click", () => {
+    accountMenu.classList.remove("open");
+  });
+
+  document.getElementById("super-reload-btn").addEventListener("click", () => {
+    const url = new URL(location.href);
+    url.searchParams.set("_r", Date.now());
+    location.href = url.toString();
+  });
 
   function showLogin() {
     document.getElementById("login-screen").style.display = "flex";
