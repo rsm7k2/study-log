@@ -1004,6 +1004,10 @@
   }
 
   async function loadStats() {
+    if (!currentRefDate && currentUnit === "day") {
+      currentRefDate = todayLocalStr();
+    }
+
     if (!statsMaxManuallySet) {
       document.getElementById("stats-max").value = DEFAULT_MAX_HOURS[currentUnit];
     }
