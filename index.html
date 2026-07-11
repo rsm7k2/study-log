@@ -359,10 +359,17 @@
         <button type="button" class="info-btn" id="log-tips-btn" aria-label="効果的な書き方のヒント">?</button>
       </div>
       <form id="log-form">
+        <label class="field-label" for="log-subject-id">科目</label>
         <select id="log-subject-id" required></select>
+
+        <label class="field-label" for="log-date">日付</label>
         <input type="date" id="log-date" required>
-        <input type="number" id="log-minutes" placeholder="学習時間(分)" required>
-        <input type="text" id="log-memo" placeholder="学習内容(任意)">
+
+        <label class="field-label" for="log-minutes">学習時間(分)</label>
+        <input type="number" id="log-minutes" placeholder="45" required>
+
+        <label class="field-label" for="log-memo">学習内容(任意)</label>
+        <input type="text" id="log-memo" placeholder="今日学んだことを一言で">
 
         <label class="field-label">自己採点(任意)</label>
         <div class="star-rating" id="log-recall-stars">
