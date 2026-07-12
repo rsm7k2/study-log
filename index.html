@@ -163,21 +163,26 @@
   .add-subject-btn:active { background: var(--primary-dark); }
 
   li.item {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
     padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.92rem;
   }
   li.item:last-child { border-bottom: none; }
   .item-main { min-width: 0; }
   .item-title { font-weight: 600; }
-  .item-sub { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+  .item-memo { color: var(--text); font-size: 0.85rem; margin-top: 4px; white-space: pre-wrap; }
+  .item-sub { color: var(--text-muted); font-size: 0.82rem; margin-top: 4px; }
   .item-actions { display: flex; gap: 6px; flex: 0 0 auto; }
 
-  button, input, select { font: inherit; }
+  button, input, select, textarea { font: inherit; }
 
-  input, select {
+  input, select, textarea {
     width: 100%; min-height: 44px; padding: 8px 12px;
     border: 1px solid var(--border); border-radius: 10px;
     background: var(--surface); color: var(--text); margin-bottom: 10px;
+  }
+
+  textarea {
+    resize: vertical;
   }
 
   input[type="date"] {
@@ -187,7 +192,7 @@
     appearance: none;
   }
 
-  input:focus, select:focus, button:focus-visible {
+  input:focus, select:focus, textarea:focus, button:focus-visible {
     outline: 2px solid var(--primary); outline-offset: 1px;
   }
 
@@ -253,6 +258,14 @@
   }
   nav.tabbar button .icon { font-size: 1.2rem; }
   nav.tabbar button.active { color: var(--primary); font-weight: 700; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 8px);
+    background: rgba(30, 36, 51, 0.92); color: #fff; font-size: 0.82rem;
+    padding: 10px 18px; border-radius: 999px; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease; z-index: 80; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
   .overlay {
     position: fixed; inset: 0; background: rgba(15, 20, 30, 0.45);
@@ -369,7 +382,7 @@
         <input type="number" id="log-minutes" placeholder="45" required>
 
         <label class="field-label" for="log-memo">学習内容(任意)</label>
-        <input type="text" id="log-memo" placeholder="今日学んだことを一言で">
+        <textarea id="log-memo" rows="5" placeholder="今日学んだことを書いてみましょう"></textarea>
 
         <label class="field-label">自己採点(任意)</label>
         <div class="star-rating" id="log-recall-stars">
@@ -439,7 +452,9 @@
   <button type="button" data-tab="stats"><span class="icon">◔</span>集計</button>
 </nav>
 
-<div class="overlay" id="detail-overlay">
+<div class="toast" id="toast"></div>
+
+<div class="overlay center-modal" id="detail-overlay">
   <div class="sheet">
     <h2><span id="detail-title">詳細</span><button type="button" class="sheet-close" id="detail-close">×</button></h2>
     <div id="detail-empty" style="display:none;">この日の記録はありません</div>
@@ -853,6 +868,8 @@
     if (!res.ok) {
       const data = await res.json();
       alert(data.error);
+    } else {
+      showToast("科目名を更新しました");
     }
 
     await loadSubjects();
@@ -867,6 +884,7 @@
       return;
     }
 
+    showToast("科目を削除しました");
     await loadSubjects();
   }
 
@@ -882,6 +900,7 @@
     });
 
     input.value = "";
+    showToast("科目を追加しました");
     await loadSubjects();
   });
 
@@ -923,6 +942,7 @@
 
   async function deleteLogFromDetail(id) {
     await apiFetch(`/study_logs/${id}`, { method: "DELETE" });
+    showToast("削除しました");
     await loadSubjects();
     await loadStats();
     if (currentDetailDate) await openDetail(currentDetailDate, document.getElementById("detail-title").dataset.label);
@@ -948,7 +968,8 @@
         <li class="item">
           <div class="item-main">
             <div class="item-title">${l.subject_name} / ${formatHM(l.minutes)}</div>
-            <div class="item-sub">${l.memo ?? ""} ・ ${starsText(l.recall_score)}</div>
+            ${l.memo ? `<div class="item-memo">${l.memo}</div>` : ""}
+            <div class="item-sub">${starsText(l.recall_score)}</div>
           </div>
           <div class="item-actions">
             <button type="button" class="btn btn-ghost" data-edit-log='${JSON.stringify(l)}'>編集</button>
@@ -1073,6 +1094,15 @@
     renderSubjectDonut(bySubject);
   }
 
+  let toastTimer = null;
+  function showToast(message) {
+    const el = document.getElementById("toast");
+    el.textContent = message;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+  }
+
   document.getElementById("stats-max").addEventListener("input", () => {
     statsMaxManuallySet = true;
     loadStats();
@@ -1109,6 +1139,7 @@
     }
 
     resetLogForm();
+    showToast(editId ? "更新しました" : "記録しました");
     await loadSubjects();
     await loadStats();
   });
