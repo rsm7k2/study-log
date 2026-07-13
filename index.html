@@ -1038,7 +1038,7 @@
 
     const refQuery = currentRefDate ? `&ref=${currentRefDate}` : "";
     const byPeriod = await apiFetch(`/stats/by_period?unit=${currentUnit}${refQuery}`).then(r => r.json());
-    const bySubject = await apiFetch("/stats/by_subject").then(r => r.json());
+    const bySubject = await apiFetch(`/stats/by_subject?unit=${currentUnit}${refQuery}`).then(r => r.json());
 
     currentPeriodData = byPeriod;
 

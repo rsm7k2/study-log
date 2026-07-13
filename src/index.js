@@ -1,27 +1,22 @@
 import { jwtVerify, createRemoteJWKSet, SignJWT } from "jose";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+const ALLOWED_ORIGINS = [
+  "https://rsm7k2.github.io",
+  "http://127.0.0.1:3000",
+];
+
+function getCorsHeaders(request) {
+  const origin = request.headers.get("Origin");
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+}
 
 // GoogleのJWKS(公開鍵セット)。モジュールスコープでキャッシュされる。
 const GOOGLE_JWKS = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...CORS_HEADERS,
-    },
-  });
-}
-
-function unauthorizedResponse(message = "認証が必要です") {
-  return jsonResponse({ error: message }, 401);
-}
 
 // ---------- 認証まわり ----------
 
@@ -186,9 +181,24 @@ export default {
     const url = new URL(request.url);
     const { pathname } = url;
     const method = request.method;
+    const corsHeaders = getCorsHeaders(request);
+
+    function jsonResponse(data, status = 200) {
+      return new Response(JSON.stringify(data), {
+        status,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          ...corsHeaders,
+        },
+      });
+    }
+
+    function unauthorizedResponse(message = "認証が必要です") {
+      return jsonResponse({ error: message }, 401);
+    }
 
     if (method === "OPTIONS") {
-      return new Response(null, { headers: CORS_HEADERS });
+      return new Response(null, { headers: corsHeaders });
     }
 
     // ---------- /auth/google (認証不要で通す) ----------
@@ -509,17 +519,48 @@ export default {
     // ---------- /stats ----------
 
     if (pathname === "/stats/by_subject" && method === "GET") {
-      const { results } = await env.study_log_db
-        .prepare(`
+      const unit = url.searchParams.get("unit");
+      const refParam = url.searchParams.get("ref");
+
+      let query;
+
+      if (unit) {
+        const refDateStr = refParam && /^\d{4}-\d{2}-\d{2}$/.test(refParam) ? refParam : toDateStr(new Date());
+        const refDate = parseDateStr(refDateStr);
+
+        let start, end;
+        if (unit === "day") {
+          ({ start, end } = getDayPeriod(refDateStr, refDate));
+        } else if (unit === "week") {
+          ({ start, end } = getWeekPeriods(refDate));
+        } else if (unit === "month") {
+          ({ start, end } = getMonthPeriods(refDate));
+        } else if (unit === "year") {
+          ({ start, end } = getYearPeriods(refDate));
+        } else {
+          return jsonResponse({ error: "unitはday, week, month, yearのいずれかを指定してください" }, 400);
+        }
+
+        query = env.study_log_db.prepare(`
+          SELECT subjects.name AS subject_name, SUM(study_logs.minutes) AS total_minutes
+          FROM study_logs
+          JOIN subjects ON study_logs.subject_id = subjects.id
+          WHERE study_logs.user_id = ? AND study_logs.studied_on BETWEEN ? AND ?
+          GROUP BY subjects.id
+          ORDER BY total_minutes DESC
+        `).bind(userId, start, end);
+      } else {
+        query = env.study_log_db.prepare(`
           SELECT subjects.name AS subject_name, SUM(study_logs.minutes) AS total_minutes
           FROM study_logs
           JOIN subjects ON study_logs.subject_id = subjects.id
           WHERE study_logs.user_id = ?
           GROUP BY subjects.id
           ORDER BY total_minutes DESC
-        `)
-        .bind(userId)
-        .all();
+        `).bind(userId);
+      }
+
+      const { results } = await query.all();
       return jsonResponse(results);
     }
 
