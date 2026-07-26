@@ -1,15 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <linearGradient id="bg" x1="15%" y1="0%" x2="85%" y2="100%">
-      <stop offset="0%" stop-color="#1c2444"/>
-      <stop offset="100%" stop-color="#12162a"/>
-    </linearGradient>
     <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffcb6b"/>
-      <stop offset="100%" stop-color="#f5a623"/>
+      <stop offset="0%" stop-color="#5470e0"/>
+      <stop offset="100%" stop-color="#2740b0"/>
     </linearGradient>
   </defs>
-  <rect x="0" y="0" width="1024" height="1024" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1024" height="1024" fill="#f5f6fa"/>
   <circle cx="512" cy="512" r="250.7" fill="none" stroke="url(#ring)" stroke-width="76.6"
     stroke-linecap="round" stroke-dasharray="1575.3" stroke-dashoffset="346.8"
     transform="rotate(-90 512 512)"/>
