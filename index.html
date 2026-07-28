@@ -202,8 +202,9 @@
   }
 
   .btn { min-height: 40px; padding: 0 14px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-  .btn-primary { width: 100%; min-height: 48px; background: var(--primary); color: #fff; font-size: 1rem; }
+  .btn-primary { width: 100%; min-height: 48px; background: var(--primary); color: #fff; font-size: 1rem; transition: background 0.15s ease; }
   .btn-primary:active { background: var(--primary-dark); }
+  .btn-primary.btn-saved { background: var(--success); }
   .btn-ghost { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); font-size: 0.8rem; }
   .btn-danger { background: #FDEDEE; color: var(--danger); font-size: 0.8rem; }
 
@@ -1144,10 +1145,23 @@
     }
 
     resetLogForm();
-    showToast(editId ? "更新しました" : "記録しました");
+    flashSavedButton(editId ? "✓ 更新済み" : "✓ 記録済み");
     await loadSubjects();
     await loadStats();
   });
+
+  let savedBtnTimer = null;
+  function flashSavedButton(label) {
+    const btn = document.getElementById("log-submit-btn");
+    const restoreLabel = btn.textContent;
+    clearTimeout(savedBtnTimer);
+    btn.textContent = label;
+    btn.classList.add("btn-saved");
+    savedBtnTimer = setTimeout(() => {
+      btn.classList.remove("btn-saved");
+      btn.textContent = restoreLabel;
+    }, 1100);
+  }
 
   // ---------- Google認証 ----------
 
