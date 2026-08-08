@@ -24,6 +24,7 @@
     --danger: #E5484D;
     --star: #F5A623;
     --success: #1F9D77;
+    --success-soft: #E3F5EE;
   }
 
   * { box-sizing: border-box; }
@@ -202,9 +203,8 @@
   }
 
   .btn { min-height: 40px; padding: 0 14px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-  .btn-primary { width: 100%; min-height: 48px; background: var(--primary); color: #fff; font-size: 1rem; transition: background 0.15s ease; }
+  .btn-primary { width: 100%; min-height: 48px; background: var(--primary); color: #fff; font-size: 1rem; }
   .btn-primary:active { background: var(--primary-dark); }
-  .btn-primary.btn-saved { background: var(--success); }
   .btn-ghost { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); font-size: 0.8rem; }
   .btn-danger { background: #FDEDEE; color: var(--danger); font-size: 0.8rem; }
 
@@ -296,6 +296,30 @@
     width: 100%; max-width: 420px; max-height: 80vh;
     border-radius: 18px;
     padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  /* 記録・更新の完了ポップアップ(チェック描画+科目/時間+応援メッセージ) */
+  .save-popup-card {
+    background: var(--surface); border-radius: 18px; padding: 26px 24px 22px;
+    width: 100%; max-width: 260px; text-align: center;
+    transform: scale(0.92); opacity: 0;
+    transition: transform 0.24s cubic-bezier(.2,.9,.3,1.3), opacity 0.2s ease;
+  }
+  #save-popup-overlay.open .save-popup-card { transform: scale(1); opacity: 1; }
+  .save-popup-icon {
+    width: 54px; height: 54px; border-radius: 50%; background: var(--success-soft);
+    margin: 0 auto; display: flex; align-items: center; justify-content: center;
+  }
+  .save-popup-check {
+    stroke: var(--success); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none;
+    stroke-dasharray: 28; stroke-dashoffset: 28; transition: stroke-dashoffset 0.36s ease 0.12s;
+  }
+  #save-popup-overlay.open .save-popup-check { stroke-dashoffset: 0; }
+  .save-popup-title { font-size: 1.05rem; font-weight: 800; margin: 14px 0 2px; }
+  .save-popup-sub { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
+  .save-popup-msg { font-size: 0.82rem; color: var(--primary); font-weight: 700; margin: 10px 0 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .save-popup-card, .save-popup-check { transition: opacity 0.12s linear !important; }
   }
 
   .tier-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
@@ -513,12 +537,35 @@
   </div>
 </div>
 
+<div class="overlay center-modal" id="save-popup-overlay">
+  <div class="save-popup-card">
+    <div class="save-popup-icon">
+      <svg viewBox="0 0 32 32" width="30" height="30">
+        <path class="save-popup-check" d="M8 17l6 6 10-13"/>
+      </svg>
+    </div>
+    <p class="save-popup-title" id="save-popup-title">記録しました</p>
+    <p class="save-popup-sub" id="save-popup-sub"></p>
+    <p class="save-popup-msg" id="save-popup-msg"></p>
+  </div>
+</div>
+
 </div><!-- /#app-shell -->
 
 <script>
   const API_BASE = "https://study-log-worker.chat-gpt-senyou3.workers.dev";
   // 【要書き換え】Google Cloud ConsoleでOAuthクライアントIDを発行後、ここに設定する
   const GOOGLE_CLIENT_ID = "749503799005-agnfp418a1fpp6op73sbg0k7hjsvokpe.apps.googleusercontent.com";
+
+  // 記録・更新完了ポップアップに添える応援メッセージ。ここに増やせば増やすほどランダムで出る種類が増える
+  const ENCOURAGEMENT_MESSAGES = [
+    "よくがんばりました",
+    "その調子です",
+    "積み重ねが力になります",
+    "今日も一歩前進です",
+    "コツコツ続けていて偉い",
+    "継続は力なり",
+  ];
 
   const TIERS = [20, 100, 1000, 5000, 10000];
   const DONUT_COLORS = [
@@ -1121,8 +1168,11 @@
 
     const editId = document.getElementById("log-edit-id").value;
 
+    const subjectSelect = document.getElementById("log-subject-id");
+    const subjectName = subjectSelect.options[subjectSelect.selectedIndex]?.text || "";
+
     const body = {
-      subject_id: Number(document.getElementById("log-subject-id").value),
+      subject_id: Number(subjectSelect.value),
       studied_on: document.getElementById("log-date").value,
       minutes: Number(document.getElementById("log-minutes").value),
       memo: document.getElementById("log-memo").value,
@@ -1145,23 +1195,32 @@
     }
 
     resetLogForm();
-    flashSavedButton(editId ? "✓ 更新済み" : "✓ 記録済み");
+    showSavePopup(editId ? "update" : "create", subjectName, body.minutes);
     await loadSubjects();
     await loadStats();
   });
 
-  let savedBtnTimer = null;
-  function flashSavedButton(label) {
-    const btn = document.getElementById("log-submit-btn");
-    const restoreLabel = btn.textContent;
-    clearTimeout(savedBtnTimer);
-    btn.textContent = label;
-    btn.classList.add("btn-saved");
-    savedBtnTimer = setTimeout(() => {
-      btn.classList.remove("btn-saved");
-      btn.textContent = restoreLabel;
-    }, 1100);
+  let savePopupTimer = null;
+  function showSavePopup(kind, subjectName, minutes) {
+    const overlay = document.getElementById("save-popup-overlay");
+    document.getElementById("save-popup-title").textContent = kind === "update" ? "更新しました" : "記録しました";
+    document.getElementById("save-popup-sub").textContent = `${subjectName} / ${formatHM(minutes)}`;
+    document.getElementById("save-popup-msg").textContent =
+      ENCOURAGEMENT_MESSAGES[Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)];
+
+    overlay.classList.remove("open");
+    void overlay.offsetWidth; // 連続保存時にチェック描画アニメーションを再生させるための強制リフロー
+    overlay.classList.add("open");
+
+    clearTimeout(savePopupTimer);
+    savePopupTimer = setTimeout(() => overlay.classList.remove("open"), 1700);
   }
+  document.getElementById("save-popup-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "save-popup-overlay") {
+      clearTimeout(savePopupTimer);
+      e.currentTarget.classList.remove("open");
+    }
+  });
 
   // ---------- Google認証 ----------
 
