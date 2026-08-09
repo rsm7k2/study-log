@@ -312,7 +312,7 @@
   }
   .save-popup-check {
     stroke: var(--success); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none;
-    stroke-dasharray: 28; stroke-dashoffset: 28; transition: stroke-dashoffset 0.36s ease 0.12s;
+    stroke-dasharray: 28; stroke-dashoffset: 28; transition: stroke-dashoffset 0.65s ease-out 0.2s;
   }
   #save-popup-overlay.open .save-popup-check { stroke-dashoffset: 0; }
   .save-popup-title { font-size: 1.05rem; font-weight: 800; margin: 14px 0 2px; }
@@ -557,7 +557,7 @@
   // 【要書き換え】Google Cloud ConsoleでOAuthクライアントIDを発行後、ここに設定する
   const GOOGLE_CLIENT_ID = "749503799005-agnfp418a1fpp6op73sbg0k7hjsvokpe.apps.googleusercontent.com";
 
-  // 記録・更新完了ポップアップに添える応援メッセージ。ここに増やせば増やすほどランダムで出る種類が増える
+  // 記録・更新完了ポップアップに添える応援メッセージ(汎用)。ここに増やせば増やすほどランダムで出る種類が増える
   const ENCOURAGEMENT_MESSAGES = [
     "よくがんばりました",
     "その調子です",
@@ -566,6 +566,60 @@
     "コツコツ続けていて偉い",
     "継続は力なり",
   ];
+
+  // 連続記録日数の節目で出す専用メッセージ。keyは連続日数、未定義の日数は「◯日連続の記録です」を使う
+  const STREAK_MILESTONE_MESSAGES = {
+    3: "3日連続、いいリズムです",
+    7: "7日連続、1週間続きました",
+    14: "2週間連続、習慣になってきました",
+    30: "30日連続、大きな継続です",
+    50: "50日連続、驚異的な継続力です",
+    100: "100日連続、圧巻の記録です",
+  };
+
+  // 実際の記録データ(連続日数・直近7日間の合計)から、その時だけ成立するメッセージを組み立てる
+  function computeAchievementMessages(logs) {
+    const minutesByDate = new Map();
+    for (const log of logs) {
+      minutesByDate.set(log.studied_on, (minutesByDate.get(log.studied_on) || 0) + log.minutes);
+    }
+
+    const today = todayLocalStr();
+
+    let streak = 0;
+    while (minutesByDate.has(shiftDateStr(today, -streak))) streak++;
+
+    let last7Days = 0;
+    let prior7Days = 0;
+    for (let i = 0; i < 7; i++) last7Days += minutesByDate.get(shiftDateStr(today, -i)) || 0;
+    for (let i = 7; i < 14; i++) prior7Days += minutesByDate.get(shiftDateStr(today, -i)) || 0;
+
+    const messages = [];
+
+    if (streak >= 2) {
+      messages.push(STREAK_MILESTONE_MESSAGES[streak] || `${streak}日連続の記録です`);
+    }
+    if (prior7Days > 0 && last7Days > prior7Days) {
+      messages.push(`直近7日間は、その前の7日間より${formatHM(last7Days - prior7Days)}多く学習できています`);
+    }
+    if (last7Days > 0) {
+      messages.push(`直近7日間の合計は${formatHM(last7Days)}です`);
+    }
+
+    return messages;
+  }
+
+  // 実績メッセージがあれば5割の確率でそちらを優先し、なければ汎用メッセージから選ぶ
+  async function pickSaveMessage() {
+    try {
+      const logs = await apiFetch("/study_logs").then(r => r.json());
+      const achievements = computeAchievementMessages(logs);
+      const pool = achievements.length > 0 && Math.random() < 0.5 ? achievements : ENCOURAGEMENT_MESSAGES;
+      return pool[Math.floor(Math.random() * pool.length)];
+    } catch {
+      return ENCOURAGEMENT_MESSAGES[Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)];
+    }
+  }
 
   const TIERS = [20, 100, 1000, 5000, 10000];
   const DONUT_COLORS = [
@@ -630,6 +684,12 @@
 
   function toDateStrUTC(d) {
     return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+  }
+
+  function shiftDateStr(dateStr, days) {
+    const d = parseDateStr(dateStr);
+    d.setUTCDate(d.getUTCDate() + days);
+    return toDateStrUTC(d);
   }
 
   function stepRefDate(unit, dateStr, direction) {
@@ -1195,18 +1255,18 @@
     }
 
     resetLogForm();
-    showSavePopup(editId ? "update" : "create", subjectName, body.minutes);
+    const popupMessage = await pickSaveMessage();
+    showSavePopup(editId ? "update" : "create", subjectName, body.minutes, popupMessage);
     await loadSubjects();
     await loadStats();
   });
 
   let savePopupTimer = null;
-  function showSavePopup(kind, subjectName, minutes) {
+  function showSavePopup(kind, subjectName, minutes, message) {
     const overlay = document.getElementById("save-popup-overlay");
     document.getElementById("save-popup-title").textContent = kind === "update" ? "更新しました" : "記録しました";
     document.getElementById("save-popup-sub").textContent = `${subjectName} / ${formatHM(minutes)}`;
-    document.getElementById("save-popup-msg").textContent =
-      ENCOURAGEMENT_MESSAGES[Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)];
+    document.getElementById("save-popup-msg").textContent = message;
 
     overlay.classList.remove("open");
     void overlay.offsetWidth; // 連続保存時にチェック描画アニメーションを再生させるための強制リフロー
