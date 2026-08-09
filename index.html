@@ -305,7 +305,7 @@
     transform: scale(0.92); opacity: 0;
     transition: transform 0.24s cubic-bezier(.2,.9,.3,1.3), opacity 0.2s ease;
   }
-  #save-popup-overlay.open .save-popup-card { transform: scale(1); opacity: 1; }
+  #save-popup-overlay.play .save-popup-card { transform: scale(1); opacity: 1; }
   .save-popup-icon {
     width: 54px; height: 54px; border-radius: 50%; background: var(--success-soft);
     margin: 0 auto; display: flex; align-items: center; justify-content: center;
@@ -314,7 +314,7 @@
     stroke: var(--success); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none;
     stroke-dasharray: 28; stroke-dashoffset: 28; transition: stroke-dashoffset 0.65s ease-out 0.2s;
   }
-  #save-popup-overlay.open .save-popup-check { stroke-dashoffset: 0; }
+  #save-popup-overlay.play .save-popup-check { stroke-dashoffset: 0; }
   .save-popup-title { font-size: 1.05rem; font-weight: 800; margin: 14px 0 2px; }
   .save-popup-sub { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
   .save-popup-msg { font-size: 0.82rem; color: var(--primary); font-weight: 700; margin: 10px 0 0; }
@@ -1268,17 +1268,29 @@
     document.getElementById("save-popup-sub").textContent = `${subjectName} / ${formatHM(minutes)}`;
     document.getElementById("save-popup-msg").textContent = message;
 
+    // "表示する"(open)と"アニメーションさせる"(play)を別クラスにしているのは、
+    // display:none→flexと見た目の変化(拡大・チェック描画)を同時に1クラスで行うと、
+    // ブラウザが初期状態(縮小・透明・未描画)を描画する猶予がなくトランジションが飛ばされ、
+    // 一瞬で完成形が出てしまう(=描画が速く見える)ため。openで表示だけしてから
+    // 1フレーム待ってplayを付け、初期状態→完了状態への変化を確実に描画させる。
+    overlay.classList.remove("play");
     overlay.classList.remove("open");
-    void overlay.offsetWidth; // 連続保存時にチェック描画アニメーションを再生させるための強制リフロー
+    void overlay.offsetWidth; // 強制リフロー(直前の状態をリセット)
     overlay.classList.add("open");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => overlay.classList.add("play"));
+    });
 
     clearTimeout(savePopupTimer);
-    savePopupTimer = setTimeout(() => overlay.classList.remove("open"), 1700);
+    savePopupTimer = setTimeout(() => {
+      overlay.classList.remove("open");
+      overlay.classList.remove("play");
+    }, 1700);
   }
   document.getElementById("save-popup-overlay").addEventListener("click", (e) => {
     if (e.target.id === "save-popup-overlay") {
       clearTimeout(savePopupTimer);
-      e.currentTarget.classList.remove("open");
+      e.currentTarget.classList.remove("open", "play");
     }
   });
 
