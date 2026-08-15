@@ -765,7 +765,7 @@
     const legend = segments.map(seg => `
       <div class="donut-legend-item">
         <span class="donut-dot" style="background:${seg.color};"></span>
-        <span>${seg.name} ${Math.round(seg.percent)}%(${formatHM(seg.minutes)})</span>
+        <span>${seg.name} ${Math.round(seg.percent)}%&nbsp;&nbsp;(${formatHM(seg.minutes)})</span>
       </div>
     `).join("");
 
