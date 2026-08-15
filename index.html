@@ -753,7 +753,7 @@
       const percent = (s.total_minutes / total) * 100;
       const offset = 100 - cumulative + 25;
       cumulative += percent;
-      return { color: DONUT_COLORS[i % DONUT_COLORS.length], percent, offset, name: s.subject_name };
+      return { color: DONUT_COLORS[i % DONUT_COLORS.length], percent, offset, name: s.subject_name, minutes: s.total_minutes };
     });
 
     const circles = segments.map(seg => `
@@ -765,7 +765,7 @@
     const legend = segments.map(seg => `
       <div class="donut-legend-item">
         <span class="donut-dot" style="background:${seg.color};"></span>
-        <span>${seg.name} ${Math.round(seg.percent)}%</span>
+        <span>${seg.name} ${Math.round(seg.percent)}%(${formatHM(seg.minutes)})</span>
       </div>
     `).join("");
 
